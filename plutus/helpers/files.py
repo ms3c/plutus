@@ -11,6 +11,7 @@ import requests
 import yaml
 from datetime import datetime  # for converting unix timestamp to datetime
 from strings import BinaryFileAnalyzer
+import lupa
 
 mime = MimeTypes()
 
@@ -25,6 +26,21 @@ VT_API_KEY = config['VT_API_KEY']
     If the file is not in the VT database, then we will get an error saying that the file is not found in the VT database.
 
 """
+class LuaBinaryAnalyzer:
+    def __init__(self, lua_script_path):
+        self.lua = lupa.LuaRuntime()
+        with open(lua_script_path, 'r') as file:
+            self.lua_code = file.read()
+        self.lua.execute(self.lua_code)
+
+    def check_binary_functions(self, binary_path):
+        check_functions_lua = self.lua.eval('checkBinaryFunctions')
+        result = check_functions_lua(binary_path)
+        return result
+
+# Create an instance of the LuaBinaryAnalyzer class
+analyzer = LuaBinaryAnalyzer('ext/functions.lua')
+
 
 
 class VirusTotalAPI:
@@ -69,6 +85,9 @@ def getfiledetails(path):
     vt_api = VirusTotalAPI(VT_API_KEY)
     file_details = vt_api.get_file_details(md5hash)
     print(file_details)
+
+    # Call the check_binary_functions method
+    result = analyzer.check_binary_functions(infile)
 
     return {'flename': infile, 'mime_type': filemime, 'filehash': md5hash, 'size': size, 'lastmodified': lastmodified,
             'creationdate': creationdate}
